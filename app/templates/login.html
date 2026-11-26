@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sign in · Firewall Backups</title><link rel="stylesheet" href="/static/style.css"></head>
+<body><div class="login panel">
+  <h1>Firewall Backups</h1>
+  <p class="sub">Nightly Sophos firewall backups and change reports</p>
+  {% if not configured %}
+    <div class="warnbox">Set <code>ADMIN_PASSWORD</code> and <code>APP_SECRET_KEY</code> in the <code>.env</code> file, then restart the app.</div>
+  {% endif %}
+  {% if error %}<div class="warnbox">{{ error }}</div>{% endif %}
+  <form method="post" action="/login">
+    <label>Password</label><input type="password" name="password" autofocus>
+    <div style="margin-top:16px"><button class="btn primary" type="submit">Sign in</button></div>
+  </form>
+</div></body></html>

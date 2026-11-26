@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="row between">
+  <div><h1>Dashboard</h1>
+  <p class="sub">Every firewall is backed up nightly and compared with its previous backup. Changes are emailed to the report recipients.</p></div>
+  <form method="post" action="/run" class="inline"><button class="btn primary" {{ 'disabled' if progress.running }}>Run backup &amp; report now</button></form>
+</div>
+
+{% if not central_ok %}<div class="warnbox">Sophos Fusion partner API credentials aren't set (<code>SOPHOS_CLIENT_ID</code> / <code>SOPHOS_CLIENT_SECRET</code>), so firewalls can't be discovered or exported from Fusion.</div>{% endif %}
+{% if not email_ok %}<div class="warnbox">Email isn't configured, so reports will be saved here but not sent. See the email settings in <code>.env</code>.</div>{% endif %}
+
+<div class="tiles">
+  <div class="tile"><div class="n">{{ counts.enabled or 0 }}</div><div class="l">Firewalls monitored</div></div>
+  <div class="tile"><div class="n">{{ counts.healthy or 0 }}</div><div class="l">Backing up OK</div></div>
+  <div class="tile {{ 'bad' if counts.failed }}"><div class="n">{{ counts.failed or 0 }}</div><div class="l"><a href="/firewalls?show=problems">Last backup failed</a></div></div>
+  <div class="tile {{ 'warn' if counts.setup }}"><div class="n">{{ counts.setup or 0 }}</div><div class="l"><a href="/firewalls?show=problems">Need setup</a></div></div>
+  {% if last %}<div class="tile {{ 'warn' if last.summary.review }}"><div class="n">{{ last.summary.changes or 0 }}</div><div class="l">Changes in last run{% if last.summary.review %} · {{ last.summary.review }} flagged{% endif %}</div></div>{% endif %}
+</div>
+
+{% if last %}
+<h2>Last run · {{ last.started_at|local_time }} <a class="small" href="/runs/{{ last.id }}" target="_blank">open report</a></h2>
+{% if changed %}
+<table class="grid">
+  <tr><th>Firewall</th><th>Client</th><th>Result</th><th>Changes</th><th></th></tr>
+  {% for r in changed %}
+  <tr>
+    <td><a href="/firewalls/{{ r.firewall_id }}/edit">{{ r.name or r.firewall_id }}</a></td>
+    <td>{{ r.tenant_name }}</td>
+    <td>{% if r.status == 'failed' %}<span class="pill failed">failed</span> <span class="small muted">{{ r.error }}</span>{% else %}<span class="pill ok">backed up</span>{% endif %}</td>
+    <td class="nowrap">{% if r.change_count %}{{ r.change_count }}{% if r.review_count %} <span class="pill flag">{{ r.review_count }} flagged</span>{% endif %}{% endif %}</td>
+    <td class="nowrap">{% if r.change_count %}<a href="/diff?a={{ r.prev_backup_id }}&b={{ r.backup_id }}">View changes</a>{% endif %}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<div class="panel">No changes and no failed backups in the last run.</div>
+{% endif %}
+{% endif %}
+
+<h2>Run history</h2>
+<table class="grid">
+  <tr><th>Started</th><th>Trigger</th><th>Status</th><th>Backed up</th><th>Changes</th><th>Failed</th><th>Email</th><th></th></tr>
+  {% for r in runs %}
+  <tr>
+    <td class="nowrap">{{ r.started_at|local_time }}</td>
+    <td>{{ r.trigger }}</td>
+    <td>{% if r.status == 'done' %}<span class="pill ok">done</span>{% elif r.status == 'running' %}<span class="pill first">running</span>{% else %}<span class="pill failed">{{ r.status }}</span> <span class="small muted">{{ r.summary.error }}</span>{% endif %}</td>
+    <td>{{ r.summary.backed_up if r.summary.backed_up is defined }}{% if r.summary.firewalls is defined %} / {{ r.summary.firewalls }}{% endif %}</td>
+    <td>{{ r.summary.changes if r.summary.changes is defined }}{% if r.summary.review %} <span class="pill flag">{{ r.summary.review }} flagged</span>{% endif %}</td>
+    <td>{{ r.summary.failed if r.summary.failed is defined }}</td>
+    <td>{% if r.emailed %}<span class="pill ok">sent</span>{% elif r.email_error %}<span class="pill failed" title="{{ r.email_error }}">failed</span>{% elif r.status == 'done' %}<span class="pill none">not sent</span>{% endif %}</td>
+    <td>{% if r.report_path %}<a href="/runs/{{ r.id }}" target="_blank">Report</a>{% endif %}</td>
+  </tr>
+  {% else %}
+  <tr><td colspan="8" class="muted">No runs yet. Click “Run backup &amp; report now” to take the first backups.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}

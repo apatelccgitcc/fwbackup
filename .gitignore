@@ -1,0 +1,6 @@
+.env
+data/
+__pycache__/
+*.pyc
+sample_report.html
+.DS_Store

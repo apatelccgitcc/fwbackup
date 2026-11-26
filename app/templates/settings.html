@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>Settings</h1>
+<p class="sub">Secrets (Sophos API credential, email passwords) are read from the <code>.env</code> file and aren't shown here.</p>
+{% if flash %}<div class="flash">{{ flash }}</div>{% endif %}
+
+<form method="post" action="/settings">
+<div class="form-grid">
+<div class="panel">
+  <strong>Schedule &amp; report</strong>
+  <label>Nightly run time <span class="hint">– HH:MM, 24-hour</span></label>
+  <input type="text" name="schedule_time" value="{{ s.schedule_time }}">
+  <label>Time zone</label>
+  <input type="text" name="timezone" value="{{ s.timezone }}">
+  <label>Report recipients <span class="hint">– comma-separated</span></label>
+  <textarea name="recipients" style="min-height:60px">{{ s.recipients }}</textarea>
+  <label class="check"><input type="checkbox" name="send_when_no_changes" value="1" {{ 'checked' if s.send_when_no_changes == '1' }}> Send the email even when nothing changed</label>
+  <label>Keep backups for (days) <span class="hint">– the newest 5 per firewall are always kept; 0 keeps everything</span></label>
+  <input type="number" name="retention_days" value="{{ s.retention_days }}">
+</div>
+
+<div class="panel">
+  <strong>Fallback for firewalls Fusion can't export</strong>
+  <div class="small muted">Backups normally come from Sophos Fusion's configuration export (SFOS 22.0 MR2 or later). A firewall API login is only needed for older firmware.</div>
+  <label>Default firewall API username <span class="hint">– optional; used for any firewall without its own login</span></label>
+  <input type="text" name="default_username" value="{{ s.default_username }}" autocomplete="off"
+         placeholder="{{ 'set in .env (FW_DEFAULT_USERNAME)' if env_default_login }}">
+  <label>Default password <span class="hint">{% if s.default_password_enc %}– saved; leave blank to keep{% endif %}</span></label>
+  <input type="password" name="default_password" autocomplete="new-password">
+  <label>Import folder <span class="hint">– optional; .tar exports found here (any subfolder) are imported as backups</span></label>
+  <input type="text" name="import_folder" value="{{ s.import_folder }}" placeholder="/imports">
+</div>
+</div>
+
+<div class="panel" style="margin-top:16px">
+  <strong>Comparison</strong>
+  <label>Extra fields to ignore <span class="hint">– one regular expression per line, matched against field paths such as <code>NetworkPolicy/LogTraffic</code></span></label>
+  <textarea name="ignore_patterns" placeholder="(?i)Certificate/.*">{{ s.ignore_patterns }}</textarea>
+  <label>Configuration types to ignore <span class="hint">– whole types left out of the comparison, separated by spaces or new lines, such as <code>RouterAdvertisement</code>. Use the configuration's XML name. Backups still include these types.</span></label>
+  <textarea name="ignore_types" placeholder="RouterAdvertisement AntiSpamQuarantineDigestSettings">{{ s.ignore_types }}</textarea>
+  <label>Configuration types to back up through the API <span class="hint">– blank uses the built-in list; types a firewall doesn't support are skipped</span></label>
+  <textarea name="entity_types" placeholder="{{ default_types }}">{{ s.entity_types }}</textarea>
+</div>
+<div style="margin-top:16px"><button class="btn primary">Save settings</button></div>
+</form>
+
+<h2>Connections</h2>
+<div class="panel">
+  <table class="grid" style="border:0">
+    <tr><td style="width:220px">Sophos Fusion partner API</td><td>{% if central_ok %}<span class="pill ok">configured</span>{% else %}<span class="pill failed">not set</span> <span class="small muted">SOPHOS_CLIENT_ID / SOPHOS_CLIENT_SECRET</span>{% endif %}</td></tr>
+    <tr><td>Email</td><td>{% if email_ok %}<span class="pill ok">{{ cfg.EMAIL_METHOD|upper }}</span> <span class="small muted">from {{ cfg.MAIL_FROM }}</span>{% else %}<span class="pill failed">not set</span>{% endif %}</td></tr>
+    <tr><td>Firewall TLS verification</td><td>{{ 'on' if cfg.FW_VERIFY_TLS else 'off (firewalls use self-signed certificates)' }}</td></tr>
+  </table>
+  <form method="post" action="/settings/test-email" style="margin-top:12px"><button class="btn" {{ 'disabled' if not email_ok }}>Send a test email</button></form>
+</div>
+{% endblock %}

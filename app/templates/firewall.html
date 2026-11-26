@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block body %}
+<p class="small"><a href="/firewalls">← Firewalls</a></p>
+<h1>{{ fw.name }}</h1>
+<p class="sub">{{ fw.tenant_name }} · {{ fw.model }} · {{ fw.firmware }} · <span class="mono">{{ fw.serial }}</span>
+  {% if fw.in_central and not fw.connected %} · <span class="pill failed">not connected to Central</span>{% endif %}</p>
+{% if flash %}<div class="flash">{{ flash }}</div>{% endif %}
+
+{% set m = backup_method(fw) %}
+<div class="form-grid">
+<div class="panel">
+  <strong>Backup method: {{ m[1] }}</strong>
+  <div class="small muted" style="margin-bottom:10px">
+  {% if m[0] == 'central' %}Backed up nightly through Sophos Fusion's configuration export. Nothing to set up on the firewall.
+  {% elif m[0] == 'none' %}Fusion can only export firewalls on SFOS 22.0 MR2 or later (with a paid subscription or support contract). Upgrade this firewall, or set a firewall API login below as a fallback.
+  {% else %}Backed up through the firewall's own API using the login below.{% endif %}</div>
+  <form method="post" action="/firewalls/{{ fw.id }}/edit">
+    <strong>Fallback: firewall API connection</strong> <span class="small muted">(optional)</span>
+    <div class="small muted">Only used if the Fusion export isn't available or fails. On the firewall: Backup &amp; firmware › API › turn on API configuration and allow this server's IP. Use an admin with a read-only profile.</div>
+    <label>Address <span class="hint">– blank uses the WAN IP from Central{% if fw.external_ip %} ({{ fw.external_ip }}){% endif %}</span></label>
+    <input type="text" name="host_override" value="{{ fw.host_override or '' }}" placeholder="{{ fw.external_ip or 'IP or hostname' }}">
+    <label>Port <span class="hint">– blank uses {{ default_port }}</span></label>
+    <input type="number" name="port" value="{{ fw.port or '' }}" placeholder="{{ default_port }}">
+    <label>API username <span class="hint">– blank uses the default login from Settings</span></label>
+    <input type="text" name="username" value="{{ fw.username or '' }}" autocomplete="off">
+    <label>API password <span class="hint">{% if fw.password_enc %}– saved; leave blank to keep{% endif %}</span></label>
+    <input type="password" name="password" autocomplete="new-password">
+    {% if fw.username %}<label class="check"><input type="checkbox" name="clear_login" value="1"> Remove this firewall's login (use the default)</label>{% endif %}
+    <label class="check"><input type="checkbox" name="enabled" value="1" {{ 'checked' if fw.enabled }}> Include in nightly backups</label>
+    <div style="margin-top:16px" class="row">
+      <button class="btn primary">Save</button>
+    </div>
+  </form>
+  <form method="post" action="/firewalls/{{ fw.id }}/test" style="margin-top:10px">
+    <button class="btn">Back up now</button>
+  </form>
+  {% if fw.last_error %}<p class="small" style="color:var(--rem)">Last error: {{ fw.last_error }}</p>{% endif %}
+</div>
+
+<div class="panel">
+  <strong>Recent nightly results</strong>
+  <table class="grid" style="margin-top:8px">
+    <tr><th>Run</th><th>Result</th><th>Changes</th></tr>
+    {% for h in history %}
+    <tr><td class="nowrap small">{{ h.started_at|local_time }}</td>
+      <td><span class="pill {{ h.status }}">{{ h.status }}</span>{% if h.error %}<div class="small muted">{{ h.error }}</div>{% endif %}</td>
+      <td>{% if h.change_count %}<a href="/diff?a={{ h.prev_backup_id }}&b={{ h.backup_id }}">{{ h.change_count }}</a>{% if h.review_count %} <span class="pill flag">{{ h.review_count }} flagged</span>{% endif %}{% elif h.backup_id %}<span class="muted">none</span>{% endif %}</td></tr>
+    {% else %}<tr><td colspan="3" class="muted">No runs yet.</td></tr>{% endfor %}
+  </table>
+</div>
+</div>
+
+<h2>Backups ({{ backups|length }})</h2>
+<form method="get" action="/diff">
+<table class="grid">
+  <tr><th>Compare</th><th>Taken</th><th>Source</th><th>Items</th><th>Size</th><th>Note</th><th></th></tr>
+  {% for b in backups %}
+  <tr>
+    <td class="nowrap"><label class="check" style="margin:0;display:inline-flex"><input type="radio" name="a" value="{{ b.id }}" {{ 'checked' if loop.index == 2 }}> from</label>
+      &nbsp;<label class="check" style="margin:0;display:inline-flex"><input type="radio" name="b" value="{{ b.id }}" {{ 'checked' if loop.first }}> to</label></td>
+    <td class="nowrap">{{ b.taken_at|local_time }}</td>
+    <td>{{ {'central':'Sophos Fusion export','api':'Firewall API','import':'Imported .tar'}.get(b.source, b.source) }}</td>
+    <td>{{ b.entity_count }}</td>
+    <td>{{ (b.size / 1024)|round(1) }} KB</td>
+    <td class="small muted">{{ b.note or '' }}</td>
+    <td><a href="/backups/{{ b.id }}/download">Download XML</a></td>
+  </tr>
+  {% else %}<tr><td colspan="7" class="muted">No backups yet.</td></tr>{% endfor %}
+</table>
+{% if backups|length > 1 %}<div style="margin-top:10px"><button class="btn">Compare selected backups</button></div>{% endif %}
+</form>
+{% endblock %}

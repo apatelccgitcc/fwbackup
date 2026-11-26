@@ -1,0 +1,12 @@
+services:
+  fwbackup:
+    build: .
+    container_name: fwbackup
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+      # optional: folder of .tar exports from your existing exporter
+      # - /path/to/exports:/imports:ro

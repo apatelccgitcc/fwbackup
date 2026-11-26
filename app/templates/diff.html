@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block body %}
+<p class="small"><a href="/firewalls/{{ fw.id }}/edit">← {{ fw.name }}</a></p>
+<h1>Changes on {{ fw.name }}</h1>
+<p class="sub">{{ fw.tenant_name }} · from {{ a.taken_at|local_time }} to {{ b.taken_at|local_time }} ·
+  {{ changes|length }} change{{ 's' if changes|length != 1 }}{% set nflag = changes|selectattr('review')|list|length %}{% if nflag %} · <span class="pill flag">{{ nflag }} flagged for review</span>{% endif %}</p>
+
+{% if changes %}
+<div class="panel" style="padding:0">
+{% for c in changes %}
+  <div class="change {{ 'flagged' if c.review }}">
+    <div><span class="pill {{ c.kind }}">{{ {'added':'Added','removed':'Removed','modified':'Changed','moved':'Moved'}[c.kind] }}</span></div>
+    <div>
+      <span class="muted">{{ c.label }}</span> <strong>{{ c.key }}</strong>
+      {% if c.kind == 'moved' %} <span style="color:var(--mov)">position {{ c.position[0] }} → {{ c.position[1] }}</span>{% endif %}
+      {% if c.review %}<div class="flagtxt">⚑ {{ c.review|join('; ') }}</div>{% endif %}
+      {% if c.summary %}<div class="summary">{% for lbl, val in c.summary %}<span class="muted">{{ lbl }}:</span> {{ val }}{% if not loop.last %} &nbsp;·&nbsp; {% endif %}{% endfor %}</div>{% endif %}
+      {% if c.fields %}
+      <table class="fields">
+        {% for f in c.fields %}<tr><td class="muted nowrap">{{ f.field|field_label }}</td>
+          <td><span class="old">{{ f.old if f.old != '' else '(none)' }}</span> → <span class="new">{{ f.new if f.new != '' else '(none)' }}</span></td></tr>{% endfor %}
+      </table>
+      {% endif %}
+    </div>
+  </div>
+{% endfor %}
+</div>
+{% else %}
+<div class="panel">No configuration differences between these two backups.</div>
+{% endif %}
+
+<h2>Compare other backups</h2>
+<form method="get" action="/diff" class="filters">
+  <select name="a">{% for x in backups %}<option value="{{ x.id }}" {{ 'selected' if x.id == a.id }}>{{ x.taken_at|local_time }} ({{ x.source }})</option>{% endfor %}</select>
+  <span style="align-self:center">→</span>
+  <select name="b">{% for x in backups %}<option value="{{ x.id }}" {{ 'selected' if x.id == b.id }}>{{ x.taken_at|local_time }} ({{ x.source }})</option>{% endfor %}</select>
+  <button class="btn">Compare</button>
+</form>
+{% endblock %}

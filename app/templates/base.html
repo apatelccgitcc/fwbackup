@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}Firewall Backups{% endblock %}</title>
+<link rel="stylesheet" href="/static/style.css"></head>
+<body>
+<header class="top">
+  <div class="brand">Firewall Backups</div>
+  <nav>
+    <a href="/" class="{{ 'on' if path == '/' }}">Dashboard</a>
+    <a href="/firewalls" class="{{ 'on' if path.startswith('/firewalls') }}">Firewalls</a>
+    <a href="/settings" class="{{ 'on' if path.startswith('/settings') }}">Settings</a>
+  </nav>
+  <div class="right">{% if next_run %}Next run {{ next_run|local_time }}{% endif %} &nbsp;·&nbsp; <a href="/logout">Sign out</a></div>
+</header>
+<main>
+{% if progress.running %}
+<div class="progress" id="progress"><strong>Run in progress:</strong> <span id="pmsg">{{ progress.message }}</span></div>
+<script>
+(function poll(){fetch('/status').then(r=>r.json()).then(s=>{
+  if(!s.running){location.reload();return}
+  document.getElementById('pmsg').textContent=s.message;setTimeout(poll,2000)})})();
+</script>
+{% endif %}
+{% block body %}{% endblock %}
+</main>
+</body></html>

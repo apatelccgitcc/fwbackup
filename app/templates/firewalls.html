@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="row between">
+  <div><h1>Firewalls</h1><p class="sub">Discovered from Sophos Fusion, plus any found in the import folder.</p></div>
+  <form method="post" action="/sync" class="inline"><button class="btn" {{ 'disabled' if not central_ok }}>Sync from Sophos Fusion</button></form>
+</div>
+{% if flash %}<div class="flash">{{ flash }}</div>{% endif %}
+
+<form class="filters" method="get">
+  <input type="text" name="q" value="{{ q }}" placeholder="Search name, serial, client">
+  <select name="client" onchange="this.form.submit()">
+    <option value="">All clients</option>
+    {% for c in clients %}<option {{ 'selected' if c == client }}>{{ c }}</option>{% endfor %}
+  </select>
+  <select name="show" onchange="this.form.submit()">
+    <option value="">All firewalls</option>
+    <option value="problems" {{ 'selected' if show == 'problems' }}>Failed or need setup</option>
+  </select>
+  <button class="btn">Filter</button>
+</form>
+
+<table class="grid">
+  <tr><th>Firewall</th><th>Model / firmware</th><th>Serial</th><th>Backup method</th><th>Last backup</th><th>Status</th><th>Backups</th></tr>
+  {% set ns = namespace(client=None) %}
+  {% for f in rows %}
+    {% if f.tenant_name != ns.client %}{% set ns.client = f.tenant_name %}
+      <tr class="client"><td colspan="7">{{ f.tenant_name or '(unknown client)' }}</td></tr>{% endif %}
+    <tr>
+      <td><a href="/firewalls/{{ f.id }}/edit">{{ f.name }}</a>
+        {% if not f.enabled %} <span class="pill none">disabled</span>{% endif %}
+        {% if not f.in_central %} <span class="pill none" title="Only known from imported backups">import only</span>{% endif %}
+        {% if f.ha_role == 'auxiliary' %} <span class="pill none" title="Auxiliary unit of an HA pair; the primary's backup covers the cluster">HA auxiliary</span>{% elif f.ha_role == 'primary' %} <span class="pill none" title="Primary unit of an HA pair">HA primary</span>{% endif %}
+        {% if f.in_central and not f.connected %} <span class="pill failed" title="Not connected to Sophos Central">offline</span>{% endif %}</td>
+      <td class="small">{{ f.model }}<br><span class="muted">{{ f.firmware }}</span></td>
+      <td class="mono">{{ f.serial }}</td>
+      {% set m = backup_method(f) %}
+      <td class="small">{% if m[0] == 'aux' %}<span class="muted">{{ m[1] }}</span>{% elif m[0] == 'none' %}<span class="pill skipped" title="Upgrade the firmware, or set a firewall API login">{{ m[1] }}</span>{% else %}{{ m[1] }}{% endif %}</td>
+      <td class="small nowrap">{{ f.last_backup_at|local_time }}</td>
+      <td>{% if f.last_status %}<span class="pill {{ f.last_status }}">{{ {'ok':'ok','first':'first backup','failed':'failed','skipped':'needs setup'}[f.last_status] }}</span>{% endif %}
+        {% if f.last_error %}<div class="small muted">{{ f.last_error }}</div>{% endif %}</td>
+      <td>{{ f.backups }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="7" class="muted">No firewalls yet. Click “Sync from Sophos Fusion”, or set an import folder in Settings.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}

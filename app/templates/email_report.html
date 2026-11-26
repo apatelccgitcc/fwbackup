@@ -1,0 +1,138 @@
+{%- set K = {
+  'added':    {'bg':'#e6f4ea','fg':'#137333','label':'Added'},
+  'removed':  {'bg':'#fce8e6','fg':'#a50e0e','label':'Removed'},
+  'modified': {'bg':'#fef7e0','fg':'#8a5a00','label':'Changed'},
+  'moved':    {'bg':'#e8f0fe','fg':'#1a56c4','label':'Moved'}} -%}
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>Firewall change report</title></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:Segoe UI,Helvetica,Arial,sans-serif;color:#1f2937;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;">
+<tr><td align="center" style="padding:24px 12px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:860px;background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;">
+
+<tr><td style="padding:24px 28px 8px 28px;">
+  <div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#6b7280;">Nightly firewall backup</div>
+  <div style="font-size:22px;font-weight:600;margin-top:4px;">Firewall change report</div>
+  <div style="font-size:14px;color:#6b7280;margin-top:2px;">{{ date_str }} · compared with each firewall's previous backup</div>
+</td></tr>
+
+<tr><td style="padding:12px 28px 4px 28px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+  {%- for val, lbl, color in [
+      (summary.changes, 'Changes', '#1f2937'),
+      (summary.changed_firewalls, 'Firewalls changed', '#1f2937'),
+      (summary.review, 'Flagged for review', '#c2410c' if summary.review else '#1f2937'),
+      (summary.failed, 'Backups failed', '#a50e0e' if summary.failed else '#1f2937'),
+      (summary.backed_up, 'Backed up', '#1f2937')] %}
+    <td width="20%" style="padding:4px;">
+      <div style="border:1px solid #e5e7eb;border-radius:6px;padding:10px 12px;">
+        <div style="font-size:22px;font-weight:600;color:{{ color }};">{{ val }}</div>
+        <div style="font-size:12px;color:#6b7280;">{{ lbl }}</div>
+      </div>
+    </td>
+  {%- endfor %}
+  </tr></table>
+</td></tr>
+
+{% if not clients %}
+<tr><td style="padding:16px 28px;">
+  <div style="background:#e6f4ea;color:#137333;border-radius:6px;padding:12px 14px;font-size:14px;">
+    No configuration changes on any firewall since the previous backup.</div>
+</td></tr>
+{% endif %}
+
+{% for client, fws in clients.items() %}
+<tr><td style="padding:20px 28px 0 28px;">
+  <div style="font-size:17px;font-weight:600;border-bottom:2px solid #1f2937;padding-bottom:4px;">{{ client }}</div>
+</td></tr>
+{% for fw in fws %}
+<tr><td style="padding:12px 28px 0 28px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+    <td style="font-size:15px;font-weight:600;">{{ fw.name or fw.firewall_id }}
+      <span style="font-weight:400;color:#6b7280;font-size:13px;">&nbsp;{{ fw.model or '' }}{% if fw.serial %}{{ ' · ' if fw.model }}{{ fw.serial }}{% endif %}{% if fw.firmware %} · {{ fw.firmware }}{% endif %}</span></td>
+    <td align="right" style="font-size:13px;white-space:nowrap;">
+      {{ fw.change_count }} change{{ 's' if fw.change_count != 1 }}
+      {%- if fw.review_count %} · <span style="color:#c2410c;font-weight:600;">{{ fw.review_count }} to review</span>{% endif %}
+      &nbsp;<a href="{{ base_url }}/diff?a={{ fw.prev_backup_id }}&b={{ fw.backup_id }}" style="color:#1a56c4;">Full diff</a></td>
+  </tr></table>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:6px;border:1px solid #e5e7eb;border-radius:6px;border-collapse:separate;font-size:13px;">
+  {% for c in fw.changes %}{% set k = K[c.kind] %}
+    <tr style="{% if c.review %}background:#fff7ed;{% endif %}">
+      <td valign="top" width="78" style="padding:8px 8px;border-top:{{ '0' if loop.first else '1px solid #e5e7eb' }};">
+        <span style="display:inline-block;background:{{ k.bg }};color:{{ k.fg }};font-weight:600;font-size:11px;padding:2px 7px;border-radius:10px;">{{ k.label }}</span></td>
+      <td valign="top" style="padding:8px 8px;border-top:{{ '0' if loop.first else '1px solid #e5e7eb' }};">
+        <span style="color:#6b7280;">{{ c.label }}</span> <strong>{{ c.key }}</strong>
+        {%- if c.kind == 'moved' %} <span style="color:#1a56c4;">position {{ c.position[0] }} → {{ c.position[1] }}</span>{% endif %}
+        {%- if c.review %}<div style="margin-top:3px;color:#c2410c;font-weight:600;font-size:12px;">⚑ {{ c.review|join('; ') }}</div>{% endif %}
+        {%- if c.summary %}
+        <div style="margin-top:4px;color:#374151;font-size:12px;line-height:1.5;">
+          {%- for lbl, val in c.summary %}<span style="color:#6b7280;">{{ lbl }}:</span> {{ val }}{% if not loop.last %} &nbsp;·&nbsp; {% endif %}{% endfor %}</div>
+        {%- endif %}
+        {%- if c.fields %}
+        <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:4px;font-size:12px;">
+          {% for f in c.fields[:25] %}
+          <tr><td valign="top" style="padding:1px 10px 1px 0;color:#6b7280;white-space:nowrap;">{{ f.field|field_label }}</td>
+              <td valign="top" style="padding:1px 0;">
+                <span style="background:#fce8e6;color:#a50e0e;text-decoration:line-through;padding:0 3px;">{{ f.old if f.old != '' else '(none)' }}</span>
+                → <span style="background:#e6f4ea;color:#137333;padding:0 3px;">{{ f.new if f.new != '' else '(none)' }}</span></td></tr>
+          {% endfor %}
+          {% if c.fields|length > 25 %}<tr><td colspan="2" style="color:#6b7280;">…and {{ c.fields|length - 25 }} more fields (see full diff)</td></tr>{% endif %}
+        </table>
+        {%- endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </table>
+</td></tr>
+{% endfor %}
+{% endfor %}
+
+{% if problems %}
+<tr><td style="padding:24px 28px 0 28px;">
+  <div style="font-size:17px;font-weight:600;color:#a50e0e;">Backups that failed ({{ problems|length }})</div>
+  <div style="font-size:13px;color:#6b7280;margin-bottom:6px;">These firewalls weren't compared tonight, so changes on them won't show until a backup succeeds.</div>
+  <table role="presentation" width="100%" cellpadding="6" cellspacing="0" style="border:1px solid #e5e7eb;font-size:13px;">
+  {% for p in problems %}
+    <tr><td style="border-top:{{ '0' if loop.first else '1px solid #e5e7eb' }};white-space:nowrap;"><strong>{{ p.name or p.firewall_id }}</strong><br><span style="color:#6b7280;">{{ p.tenant_name }}</span></td>
+        <td style="border-top:{{ '0' if loop.first else '1px solid #e5e7eb' }};color:#a50e0e;">{{ p.error }}</td></tr>
+  {% endfor %}
+  </table>
+</td></tr>
+{% endif %}
+
+{% if setup_needed %}
+<tr><td style="padding:20px 28px 0 28px;">
+  <div style="font-size:15px;font-weight:600;">Not backed up – action needed ({{ setup_needed|length }})</div>
+  <div style="font-size:13px;color:#374151;margin-top:4px;line-height:1.6;">
+  {% for p in setup_needed[:60] %}{{ p.name or p.firewall_id }} <span style="color:#6b7280;">({{ p.tenant_name }}: {{ p.error }})</span>{% if not loop.last %}<br>{% endif %}{% endfor %}
+  {% if setup_needed|length > 60 %}<br>…and {{ setup_needed|length - 60 }} more{% endif %}</div>
+</td></tr>
+{% endif %}
+
+{% if first %}
+<tr><td style="padding:20px 28px 0 28px;">
+  <div style="font-size:15px;font-weight:600;">First backup taken ({{ first|length }})</div>
+  <div style="font-size:13px;color:#374151;margin-top:4px;">These will be compared from the next run: {{ first|map(attribute='name')|map('default', '?', true)|join(', ') }}</div>
+</td></tr>
+{% endif %}
+
+{% if unchanged %}
+<tr><td style="padding:20px 28px 0 28px;">
+  <div style="font-size:15px;font-weight:600;">No changes ({{ unchanged|length }})</div>
+  <div style="font-size:13px;color:#6b7280;margin-top:4px;line-height:1.5;">{{ unchanged|map(attribute='name')|map('default', '?', true)|join(', ') }}</div>
+</td></tr>
+{% endif %}
+
+{% if notes %}
+<tr><td style="padding:20px 28px 0 28px;font-size:12px;color:#6b7280;">
+  {% for n in notes %}{{ n }}<br>{% endfor %}
+</td></tr>
+{% endif %}
+
+<tr><td style="padding:20px 28px 24px 28px;font-size:12px;color:#9ca3af;">
+  Password and pre-shared-key fields are excluded from the comparison because firewalls re-encrypt them on every export.
+  <a href="{{ base_url }}/runs/{{ run.id }}" style="color:#6b7280;">Open this report in the web app</a>
+</td></tr>
+</table></td></tr></table>
+</body></html>

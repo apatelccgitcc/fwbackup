@@ -1,0 +1,6 @@
+.git
+.env
+data
+tests
+sample_report.html
+__pycache__
