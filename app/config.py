@@ -16,6 +16,10 @@ DB_PATH = DATA_DIR / "fwbackup.db"
 ADMIN_PASSWORD = _env("ADMIN_PASSWORD")
 APP_SECRET_KEY = _env("APP_SECRET_KEY")          # used for sessions and for encrypting firewall passwords
 APP_BASE_URL = _env("APP_BASE_URL", "http://localhost:8080").rstrip("/")
+# ADMIN_PASSWORD only creates the first account. Set this to true to allow it as an emergency sign-in
+# (for example if every admin has lost their authenticator); turn it off again afterwards.
+ALLOW_ADMIN_PASSWORD_LOGIN = _env("ALLOW_ADMIN_PASSWORD_LOGIN", "false").lower() in ("1", "true", "yes")
+SESSION_IDLE_MINUTES = int(_env("SESSION_IDLE_MINUTES", "60") or 60)
 
 # Sophos Central / Fusion partner API credential
 SOPHOS_CLIENT_ID = _env("SOPHOS_CLIENT_ID")

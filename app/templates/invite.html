@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Set your password · Firewall Backups</title><link rel="stylesheet" href="/static/style.css"></head>
+<body><div class="login panel">
+  <h1>Firewall Backups</h1>
+  {% if not invitee %}
+    <div class="warnbox">This link has expired or has already been used. Ask an admin to send you a new one.</div>
+    <a href="/login" class="small">Go to sign-in</a>
+  {% else %}
+    <p class="sub">Choose a password for <strong>{{ invitee.username }}</strong>. Next you'll sign in and set up an authenticator app.</p>
+    {% if error %}<div class="warnbox">{{ error }}</div>{% endif %}
+    <form method="post" action="/invite/{{ token }}">
+      <input type="text" name="username" value="{{ invitee.username }}" autocomplete="username" hidden>
+      <label>New password <span class="hint">– at least 12 characters</span></label><input type="password" name="password" autocomplete="new-password" autofocus>
+      <label>Confirm password</label><input type="password" name="confirm" autocomplete="new-password">
+      <div style="margin-top:16px"><button class="btn primary" type="submit">Set password</button></div>
+    </form>
+  {% endif %}
+</div></body></html>

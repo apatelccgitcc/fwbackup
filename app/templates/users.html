@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>Users</h1>
+<p class="sub">Everyone signs in with their own password and an authenticator-app code. Admins can also change Settings, firewall logins and users.</p>
+{% if base_url_local %}<div class="warnbox">Set <code>APP_BASE_URL</code> in the <code>.env</code> file to the address people use to open this app, or the links in invite emails won't work.</div>{% endif %}
+{% if flash %}<div class="flash">{{ flash }}</div>{% endif %}
+<table class="grid">
+  <tr><th>User</th><th>Email</th><th>Role</th><th>Authenticator</th><th>Last sign-in</th><th>Actions</th></tr>
+  {% for u in users %}
+  <tr>
+    <td><strong>{{ u.username }}</strong>{% if u.id == user.id %} <span class="small muted">(you)</span>{% endif %}
+      {% if u.disabled %} <span class="pill failed">disabled</span>{% endif %}
+      {% if u.must_change_password %} <span class="pill none" title="Signs in with a temporary password">temporary password</span>{% endif %}</td>
+    <td class="small">{{ u.email or '' }}{% if u.invite_hash and not u.last_login_at %}<br><span class="pill none">invite sent</span>{% endif %}</td>
+    <td>{{ 'Admin' if u.is_admin else 'User' }}</td>
+    <td>{% if u.totp_enabled %}<span class="pill ok">on</span>{% else %}<span class="pill skipped">set up at next sign-in</span>{% endif %}</td>
+    <td class="small nowrap">{{ u.last_login_at|local_time }}<br><span class="muted">{{ u.last_login_ip or '' }}</span></td>
+    <td>
+      <form method="post" action="/users/{{ u.id }}/action" class="row" style="gap:6px">
+        <select name="action" style="width:auto" onchange="this.form.querySelector('.tmp').style.display = this.value=='reset_password' ? '' : 'none'; this.form.querySelector('.em').style.display = this.value=='send_link' ? '' : 'none'">
+          <option value="">Choose…</option>
+          <option value="send_link">Email a set-password link</option>
+          <option value="reset_password">Set temporary password</option>
+          <option value="reset_2fa">Reset authenticator</option>
+          {% if u.id != user.id %}
+            {% if u.disabled %}<option value="enable">Enable</option>{% else %}<option value="disable">Disable</option>{% endif %}
+            {% if u.is_admin %}<option value="remove_admin">Remove admin</option>{% else %}<option value="make_admin">Make admin</option>{% endif %}
+            <option value="delete">Delete</option>
+          {% endif %}
+        </select>
+        <input class="tmp" type="text" name="password" placeholder="Temporary password" autocomplete="off" style="display:none;width:200px">
+        <input class="em" type="email" name="email" value="{{ u.email or '' }}" placeholder="Email address" autocomplete="off" style="display:none;width:220px;padding:7px 9px;border:1px solid #cfd5dd;border-radius:6px;font:inherit">
+        <button class="btn" onclick="return this.form.action.value && (this.form.action.value!='delete' || confirm('Delete {{ u.username }}?'))">Apply</button>
+      </form>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+
+<h2>Add a user</h2>
+<div class="panel" style="max-width:560px">
+<form method="post" action="/users/new">
+  <label>Username</label><input type="text" name="username" autocomplete="off" autocapitalize="none">
+  <label>Email <span class="hint">– they'll get a link to set their own password (expires in {{ invite_hours }} hours)</span></label>
+  <input type="text" name="email" autocomplete="off" inputmode="email">
+  <label>Or a temporary password <span class="hint">– optional, instead of an email; at least {{ min_len }} characters</span></label>
+  <input type="text" name="password" autocomplete="off">
+  <label class="check"><input type="checkbox" name="is_admin" value="1"> Admin</label>
+  <div style="margin-top:16px"><button class="btn primary">Add user</button></div>
+</form>
+</div>
+{% endblock %}

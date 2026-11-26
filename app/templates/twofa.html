@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>Set up your authenticator app</h1>
+<p class="sub">Every sign-in needs a code from an authenticator app, such as Microsoft Authenticator, Google Authenticator, Authy or 1Password.</p>
+{% if flash %}<div class="flash">{{ flash }}</div>{% endif %}
+{% if error %}<div class="warnbox">{{ error }}</div>{% endif %}
+<div class="panel" style="max-width:560px">
+  <ol style="padding-left:18px;margin:0">
+    <li>In your authenticator app, add an account and scan this code:</li>
+  </ol>
+  <div class="qr" style="margin:12px 0">{{ qr|safe }}</div>
+  <div class="small muted">Can't scan it? Enter this key instead (time-based):</div>
+  <div class="mono" style="font-size:14px;margin:4px 0 14px">{{ secret }}</div>
+  <ol start="2" style="padding-left:18px;margin:0">
+    <li>Enter the 6-digit code the app shows:</li>
+  </ol>
+  <form method="post" action="/account/2fa">
+    <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]*" maxlength="7" style="max-width:160px;margin-top:8px" autofocus>
+    <div style="margin-top:16px"><button class="btn primary">Turn on</button></div>
+  </form>
+</div>
+{% endblock %}

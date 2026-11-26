@@ -75,7 +75,7 @@ The first run asks for the Sophos credential and creates `.env` on the server. O
 ```bash
 cp .env.example .env        # fill it in, see below
 docker compose up -d --build
-# open http://<server>:8080 and sign in with ADMIN_PASSWORD
+# open http://<server>:8080, enter ADMIN_PASSWORD once to create your admin account
 ```
 
 Put it behind HTTPS, for example with Caddy, nginx or a Cloudflare Tunnel, if anyone opens it from outside your network. Set `APP_BASE_URL` to that address so the links in the email work.
@@ -86,7 +86,9 @@ Without Docker: `pip install -r requirements.txt`, then `uvicorn app.web:app --h
 
 | Setting | What it's for |
 |---|---|
-| `ADMIN_PASSWORD` | Web UI sign-in |
+| `ADMIN_PASSWORD` | Used once, to create the first admin account (and for emergency sign-in if `ALLOW_ADMIN_PASSWORD_LOGIN=true`) |
+| `APP_BASE_URL` | The address people use to open the app. Used for links in report and invite emails. |
+| `SESSION_IDLE_MINUTES` | Sign people out after this many idle minutes (default 60) |
 | `APP_SECRET_KEY` | Long random string (`openssl rand -hex 32`). Signs sessions and encrypts the firewall passwords saved in the app. Don't change it later, or you'll have to re-enter those passwords. |
 | `APP_BASE_URL` | Address of the app, used for links in the email |
 | `SOPHOS_CLIENT_ID` / `SOPHOS_CLIENT_SECRET` | Fusion partner API credential. It must be allowed to run firewall configuration exports for your customer tenants. |
@@ -115,10 +117,25 @@ Without Docker: `pip install -r requirements.txt`, then `uvicorn app.web:app --h
 - The report shows *what* changed between two nightly backups. It doesn't show *who* made a change, or a change that was made and undone within the same day. For the administrator's name, check the firewall's admin log or the configuration audit log on firmware versions that have it.
 - Flagged for review: rules that allow traffic from WAN, logging turned off, a rule changed to Accept, or a rule disabled or widened to Any. Also IPS or web filter removed from a rule, NAT and port-forward changes, WAN device-access changes, admin or user changes, and new VPN access.
 
+## Users and sign-in
+
+Everyone has their own account, and every sign-in needs a password **and** a 6-digit code from an authenticator app (Microsoft Authenticator, Google Authenticator, Authy, 1Password and so on).
+
+- **First run:** open the app, enter the `ADMIN_PASSWORD` from `.env`, then create your admin account and scan the QR code with your authenticator app. After that, `ADMIN_PASSWORD` no longer signs anyone in.
+- **Adding people (Users page, admins only):** enter a username and email address and the app emails them a one-time link, valid for 48 hours, to choose their own password. They then sign in and set up their authenticator app. If email isn't set up or fails, the page shows the link so you can send it yourself. You can also give someone a temporary password instead; they must change it at first sign-in.
+- **Forgotten password or lost phone:** an admin can email a new set-password link, set a temporary password, or reset the person's authenticator from the Users page. Each of these signs the person out everywhere.
+- **Roles:** admins can change Settings, firewall logins and users, and see the audit log. Users can view everything, run backups, compare and download.
+- **Lockouts:** 5 wrong passwords or codes within 15 minutes lock that username and that address for 15 minutes. Restarting the app clears lockouts.
+- **Sessions:** signed out after 60 idle minutes (`SESSION_IDLE_MINUTES`) and after 12 hours regardless. Changing a password signs out that person's other sessions.
+- **Audit log (admins):** sign-ins, failed attempts, lockouts, user changes, settings changes, manual runs and backup downloads, with the address each came from. Kept for a year.
+- **Locked out of every admin account?** Set `ALLOW_ADMIN_PASSWORD_LOGIN=true` in `.env`, restart, use **Emergency sign-in** with `ADMIN_PASSWORD` to fix the accounts, then set it back to `false`.
+
+Passwords are stored hashed (scrypt). Authenticator secrets are stored encrypted with `APP_SECRET_KEY`. The server's clock must be right for codes to work; Docker uses the host's clock.
+
 ## Security
 
 - Keep the app on your internal network or behind a VPN. It holds a Sophos Fusion credential that can export every client firewall's configuration, plus those backups. Don't publish port 8080 to the internet.
-- Sign-in is a single shared password (`ADMIN_PASSWORD`). After 5 wrong passwords within 15 minutes, that address is locked out for 15 minutes, even with the right password. Restarting the app clears lockouts.
+- Put it behind HTTPS (for example a Caddy or nginx reverse proxy) so passwords and codes aren't sent in plain text. When `APP_BASE_URL` starts with `https`, the sign-in cookie is marked secure.
 - Secrets live only in `.env` and `data/`, which are never committed.
 
 ## Files

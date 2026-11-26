@@ -8,9 +8,13 @@
   <nav>
     <a href="/" class="{{ 'on' if path == '/' }}">Dashboard</a>
     <a href="/firewalls" class="{{ 'on' if path.startswith('/firewalls') }}">Firewalls</a>
+    {% if user and user.is_admin %}
     <a href="/settings" class="{{ 'on' if path.startswith('/settings') }}">Settings</a>
+    <a href="/users" class="{{ 'on' if path.startswith('/users') }}">Users</a>
+    <a href="/audit" class="{{ 'on' if path.startswith('/audit') }}">Audit log</a>
+    {% endif %}
   </nav>
-  <div class="right">{% if next_run %}Next run {{ next_run|local_time }}{% endif %} &nbsp;·&nbsp; <a href="/logout">Sign out</a></div>
+  <div class="right">{% if next_run %}Next run {{ next_run|local_time }} &nbsp;·&nbsp; {% endif %}{% if user %}<a href="/account">{{ user.username }}</a> &nbsp;·&nbsp; {% endif %}<a href="/logout">Sign out</a></div>
 </header>
 <main>
 {% if progress.running %}

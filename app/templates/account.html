@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>Your account</h1>
+<p class="sub">{{ user.username }}{% if user.is_admin %} · admin{% endif %}</p>
+{% if flash %}<div class="flash">{{ flash }}</div>{% endif %}
+<div class="panel" style="max-width:560px">
+  <table class="grid" style="border:0">
+    <tr><td style="width:200px">Authenticator app</td><td>{% if user.totp_enabled %}<span class="pill ok">on</span>{% else %}<span class="pill failed">not set up</span>{% endif %}
+      <div class="small muted">Lost your phone? Ask an admin to reset your authenticator.</div></td></tr>
+    <tr><td>Last sign-in</td><td>{{ user.last_login_at|local_time }} <span class="small muted">{{ user.last_login_ip or '' }}</span></td></tr>
+  </table>
+  {% if user.id %}<div style="margin-top:14px"><a class="btn" href="/account/password">Change password</a></div>{% endif %}
+</div>
+{% endblock %}

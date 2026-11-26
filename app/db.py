@@ -41,6 +41,24 @@ CREATE TABLE IF NOT EXISTS run_results (
     changes_json TEXT
 );
 CREATE TABLE IF NOT EXISTS imported_files (path TEXT PRIMARY KEY, mtime REAL, imported_at TEXT);
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE COLLATE NOCASE,
+    email TEXT,
+    password_hash TEXT NOT NULL,
+    invite_hash TEXT, invite_expires TEXT,
+    is_admin INTEGER DEFAULT 0,
+    disabled INTEGER DEFAULT 0,
+    must_change_password INTEGER DEFAULT 0,
+    totp_secret_enc TEXT, totp_enabled INTEGER DEFAULT 0, totp_last_counter INTEGER DEFAULT -1,
+    session_version INTEGER DEFAULT 1,
+    created_at TEXT, last_login_at TEXT, last_login_ip TEXT
+);
+CREATE TABLE IF NOT EXISTS audit_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    at TEXT, username TEXT, ip TEXT, event TEXT, detail TEXT
+);
+CREATE INDEX IF NOT EXISTS audit_at ON audit_log(at);
 """
 
 DEFAULT_SETTINGS = {

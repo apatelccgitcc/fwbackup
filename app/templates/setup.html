@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Create the admin account · Firewall Backups</title><link rel="stylesheet" href="/static/style.css"></head>
+<body><div class="login panel">
+  <h1>Create the admin account</h1>
+  <p class="sub">This is the first account. You'll set up an authenticator app next, and can add other people from the Users page.</p>
+  {% if error %}<div class="warnbox">{{ error }}</div>{% endif %}
+  <form method="post" action="/setup">
+    <label>Username</label><input type="text" name="username" value="{{ username }}" autocomplete="username" autocapitalize="none" autofocus>
+    <label>Password <span class="hint">– at least 12 characters</span></label><input type="password" name="password" autocomplete="new-password">
+    <label>Confirm password</label><input type="password" name="confirm" autocomplete="new-password">
+    <div style="margin-top:16px"><button class="btn primary" type="submit">Create account</button></div>
+  </form>
+</div></body></html>

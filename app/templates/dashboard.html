@@ -5,6 +5,7 @@
   <p class="sub">Every firewall is backed up nightly and compared with its previous backup. Changes are emailed to the report recipients.</p></div>
   <form method="post" action="/run" class="inline"><button class="btn primary" {{ 'disabled' if progress.running }}>Run backup &amp; report now</button></form>
 </div>
+{% if flash %}<div class="flash">{{ flash }}</div>{% endif %}
 
 {% if not central_ok %}<div class="warnbox">Sophos Fusion partner API credentials aren't set (<code>SOPHOS_CLIENT_ID</code> / <code>SOPHOS_CLIENT_SECRET</code>), so firewalls can't be discovered or exported from Fusion.</div>{% endif %}
 {% if not email_ok %}<div class="warnbox">Email isn't configured, so reports will be saved here but not sent. See the email settings in <code>.env</code>.</div>{% endif %}

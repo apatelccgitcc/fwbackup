@@ -28,7 +28,7 @@
     {% if fw.username %}<label class="check"><input type="checkbox" name="clear_login" value="1"> Remove this firewall's login (use the default)</label>{% endif %}
     <label class="check"><input type="checkbox" name="enabled" value="1" {{ 'checked' if fw.enabled }}> Include in nightly backups</label>
     <div style="margin-top:16px" class="row">
-      <button class="btn primary">Save</button>
+      {% if user.is_admin %}<button class="btn primary">Save</button>{% else %}<span class="small muted">Only admins can change these settings.</span>{% endif %}
     </div>
   </form>
   <form method="post" action="/firewalls/{{ fw.id }}/test" style="margin-top:10px">

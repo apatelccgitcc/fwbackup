@@ -5,11 +5,36 @@
   <h1>Firewall Backups</h1>
   <p class="sub">Nightly Sophos firewall backups and change reports</p>
   {% if not configured %}
-    <div class="warnbox">Set <code>ADMIN_PASSWORD</code> and <code>APP_SECRET_KEY</code> in the <code>.env</code> file, then restart the app.</div>
+    <div class="warnbox">Set <code>APP_SECRET_KEY</code> (and <code>ADMIN_PASSWORD</code> for the first sign-in) in the <code>.env</code> file, then restart the app.</div>
   {% endif %}
+  {% if flash %}<div class="flash">{{ flash }}</div>{% endif %}
   {% if error %}<div class="warnbox">{{ error }}</div>{% endif %}
-  <form method="post" action="/login">
-    <label>Password</label><input type="password" name="password" autofocus>
-    <div style="margin-top:16px"><button class="btn primary" type="submit">Sign in</button></div>
+
+  {% if step == 'code' %}
+  <form method="post" action="/login/code">
+    <label>Authenticator code</label>
+    <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]*" maxlength="7" autofocus>
+    <div class="small muted" style="margin-top:6px">Enter the 6-digit code from your authenticator app.</div>
+    <div style="margin-top:16px" class="row between"><button class="btn primary" type="submit">Verify</button><a href="/logout" class="small">Start over</a></div>
   </form>
+
+  {% elif first_run or emergency %}
+  {% if first_run %}<div class="flash">No accounts yet. Sign in with the <code>ADMIN_PASSWORD</code> from the <code>.env</code> file to create the first admin account.</div>
+  {% else %}<div class="warnbox">Emergency sign-in with the <code>ADMIN_PASSWORD</code> from the <code>.env</code> file. Turn <code>ALLOW_ADMIN_PASSWORD_LOGIN</code> off again once you're back in.</div>{% endif %}
+  {% if first_run and not admin_pw_set %}<div class="warnbox">Set <code>ADMIN_PASSWORD</code> in the <code>.env</code> file and restart the app first.</div>{% endif %}
+  <form method="post" action="/login">
+    <input type="hidden" name="mode" value="admin">
+    <label>Admin password (from .env)</label><input type="password" name="password" autocomplete="current-password" autofocus>
+    <div style="margin-top:16px" class="row between"><button class="btn primary" type="submit">Continue</button>
+      {% if emergency and not first_run %}<a href="/login" class="small">Normal sign-in</a>{% endif %}</div>
+  </form>
+
+  {% else %}
+  <form method="post" action="/login">
+    <label>Username</label><input type="text" name="username" autocomplete="username" autocapitalize="none" autofocus>
+    <label>Password</label><input type="password" name="password" autocomplete="current-password">
+    <div style="margin-top:16px" class="row between"><button class="btn primary" type="submit">Sign in</button>
+      {% if emergency_allowed %}<a href="/login?emergency=1" class="small">Emergency sign-in</a>{% endif %}</div>
+  </form>
+  {% endif %}
 </div></body></html>

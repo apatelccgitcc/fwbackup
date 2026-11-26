@@ -262,6 +262,11 @@ def run(trigger="schedule", http=None, central_client=None, send_email=True):
                                          db.now_iso() if bid else None, fid))
         # 6. retention
         try:
+            from . import auth
+            auth.prune_audit(365)
+        except Exception as e:
+            notes.append(f"Audit log cleanup failed: {e}")
+        try:
             pruned = storage.prune(int(db.get_setting("retention_days") or 0))
             if pruned:
                 notes.append(f"Removed {pruned} backups past the retention period")
